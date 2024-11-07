@@ -1,0 +1,6 @@
+---
+- name: Install required utilities
+  import_tasks: install_utilities.yml
+
+- name: Configure Talos cluster
+  import_tasks: configure_cluster.yml

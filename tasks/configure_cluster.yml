@@ -1,0 +1,38 @@
+---
+- name: Create working directory
+  file:
+    path: "{{ playbook_dir }}/talos-cluster"
+    state: directory
+
+- name: Generate Talhelper config
+  template:
+    src: talhelper.yaml.j2
+    dest: "{{ playbook_dir }}/talos-cluster/talconfig.yaml"
+
+- name: Generate secrets
+  command: talhelper gensecrets > talsecret.sops.yaml
+  args:
+    chdir: "{{ playbook_dir }}/talos-cluster"
+
+- name: Encrypt secrets file with talsecret.sops.yaml
+  command: sops -e -i "talsecret.sops.yaml"
+  args:
+    chdir: "{{ playbook_dir }}/talos-cluster"
+
+- name: Generate node configurations
+  command: talhelper genconfig
+  args:
+    chdir: "{{ playbook_dir }}/talos-cluster"
+
+- name: Apply configurations
+  shell: |
+    {% for host in groups['control_planes'] %}
+    talosctl apply-config --talosconfig=./clusterconfig/talosconfig -n {{ hostvars[host].ansible_host }} -f {{ cluster_name }}-controlplane-{{ host }}.yaml;
+    {% endfor %}
+    {% if groups['workers'] is defined and groups['workers']|length > 0 %}
+    {% for host in groups['workers'] %}
+    talosctl apply-config --talosconfig=./clusterconfig/talosconfig -n {{ hostvars[host].ansible_host }} -f {{ cluster_name }}-worker-{{ host }}.yaml;
+    {% endfor %}
+    {% endif %}
+  args:
+    chdir: "{{ playbook_dir }}/talos-cluster"

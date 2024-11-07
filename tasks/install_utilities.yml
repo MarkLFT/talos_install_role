@@ -1,0 +1,27 @@
+---
+- name: Install Talos CLI
+  get_url:
+    url: "https://github.com/siderolabs/talos/releases/{{ talos_version }}/download/talosctl-linux-amd64"
+    dest: /usr/local/bin/talosctl
+    mode: '0755'
+
+- name: Install Cilium CLI
+  get_url:
+    url: "https://github.com/cilium/cilium-cli/releases/{{ cilium_version }}/download/cilium-linux-amd64.tar.gz"
+    dest: /tmp/cilium.tar.gz
+  
+- name: Extract Cilium CLI
+  ansible.builtin.unarchive:
+    src: /tmp/cilium.tar.gz
+    dest: /usr/local/bin/
+    remote_src: yes
+
+- name: Install FluxCD CLI
+  shell: |
+    curl -s https://fluxcd.io/install.sh | sudo bash
+
+- name: Install Talhelper
+  get_url:
+    url: "https://github.com/budimanjojo/talhelper/releases/{{ talhelper_version }}/download/talhelper-linux-amd64"
+    dest: /usr/local/bin/talhelper
+    mode: '0755'

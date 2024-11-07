@@ -1,0 +1,126 @@
+---
+clusterName: {{ cluster_name }}
+kubernetesVersion: {{ kubernetes_version }}
+talosVersion: {{ talos_version }}
+endpoint: {{ cluster_endpoint }}
+allowSchedulingOnMasters: {{ cluster_schedule_on_controlplane }}
+additionalMachineCertSans:
+  - {{ groups['control_planes'][0].ansible_host }}
+additionalApiServerCertSans:
+  - {{ cluster_name }}.local
+cniConfig:
+  name: none
+
+nodes:
+  {% for host in groups['control_planes'] %}
+  - hostname: {{ host }}
+    ipAddress: {{ hostvars[host].ansible_host }}
+    installDisk: {{ install_disk }}
+    controlPlane: true
+    certSANs:
+      - {{ host }}
+      - {{ hostvars[host].ansible_host }}
+    nameservers:
+      - 192.168.100.91
+      - 192.168.100.92
+    networkInterfaces:
+      - interface: eth0
+        addresses:
+          - {{ hostvars[host].ansible_host }}/24
+        mtu: 1500
+        routes:
+          - network: 0.0.0.0/0
+            gateway: {{ ip_gateway }}
+  {% endfor %}
+
+  {% if groups['workers'] is defined and groups['workers']|length > 0 %}
+    {% for host in groups['workers'] %}
+  - hostname: {{ host }}
+    ipAddress: {{ hostvars[host].ansible_host }}
+    installDisk: {{ install_disk }}
+    controlPlane: false
+    nameservers:
+      - 192.168.100.91
+      - 192.168.100.92
+    networkInterfaces:
+      - interface: eth0
+        addresses:
+          - {{ hostvars[host].ansible_host }}/24
+        mtu: 1500
+        routes:
+          - network: 0.0.0.0/0
+            gateway: {{ ip_gateway }}
+    {% endfor %}
+  {% endif %}
+
+controlPlane:
+  patches:
+    - |-
+      - op: add
+        path: /machine/registries
+        value:
+          mirrors:
+            docker.io:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-docker.io
+              overridePath: true
+            gcr.io:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-gcr.io
+              overridePath: true
+            ghcr.io:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-ghcr.io
+              overridePath: true
+            registry.k8s.io:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-registry.k8s.io
+              overridePath: true
+            nexus.resort-manager.com:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-nexus
+              overridePath: true
+            docker.resort-manager.com:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-nexus
+              overridePath: true
+      - op: add
+        path: /cluster/proxy
+        value:
+          disabled: true
+
+worker:
+  patches:
+    - |-
+      - op: add
+        path: /machine/registries
+        value:
+          mirrors:
+            docker.io:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-docker.io
+              overridePath: true
+            gcr.io:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-gcr.io
+              overridePath: true
+            ghcr.io:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-ghcr.io
+              overridePath: true
+            registry.k8s.io:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-registry.k8s.io
+              overridePath: true
+            nexus.resort-manager.com:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-nexus
+              overridePath: true
+            docker.resort-manager.com:
+              endpoints:
+                - http://{{ harbor_ip }}/v2/proxy-nexus
+              overridePath: true
+      - op: add
+        path: /cluster/proxy
+        value:
+          disabled: true
