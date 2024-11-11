@@ -1,38 +1,62 @@
 ---
 - name: Create working directory
-  file:
+  ansible.builtin.file:
     path: "{{ playbook_dir }}/talos-cluster"
     state: directory
+  when: inventory_hostname == groups['control_planes'][0]
 
 - name: Generate Talhelper config
-  template:
+  ansible.builtin.template:
     src: talhelper.yaml.j2
     dest: "{{ playbook_dir }}/talos-cluster/talconfig.yaml"
+  when: inventory_hostname == groups['control_planes'][0]
 
-- name: Generate secrets
-  command: talhelper gensecrets > talsecret.sops.yaml
+- name: Check if secret files exists and don;t change it.
+  stat:
+    path: "{{ playbook_dir }}/talos-cluster/talsecret.sops.yaml"
+  when: inventory_hostname == groups['control_planes'][0]
+  register: result
+
+- name: Generate Talos Secrets file
+  ansible.builtin.shell: |
+    talhelper gensecret > talsecret.sops.yaml
   args:
     chdir: "{{ playbook_dir }}/talos-cluster"
+  when: (inventory_hostname == groups['control_planes'][0]) and (not result.stat.exists)
 
-- name: Encrypt secrets file with talsecret.sops.yaml
-  command: sops -e -i "talsecret.sops.yaml"
-  args:
-    chdir: "{{ playbook_dir }}/talos-cluster"
+# - name: Encrypt secrets file with talsecret.sops.yaml
+#  command: sops -e -i "talsecret.sops.yaml"
+#  args:
+#    chdir: "{{ playbook_dir }}/talos-cluster"
 
 - name: Generate node configurations
-  command: talhelper genconfig
+  ansible.builtin.command: talhelper genconfig
   args:
     chdir: "{{ playbook_dir }}/talos-cluster"
+  when: inventory_hostname == groups['control_planes'][0]
 
-- name: Apply configurations
-  shell: |
-    {% for host in groups['control_planes'] %}
-    talosctl apply-config --talosconfig=./clusterconfig/talosconfig -n {{ hostvars[host].ansible_host }} -f {{ cluster_name }}-controlplane-{{ host }}.yaml;
-    {% endfor %}
-    {% if groups['workers'] is defined and groups['workers']|length > 0 %}
-    {% for host in groups['workers'] %}
-    talosctl apply-config --talosconfig=./clusterconfig/talosconfig -n {{ hostvars[host].ansible_host }} -f {{ cluster_name }}-worker-{{ host }}.yaml;
-    {% endfor %}
+- name: Apply configurations to Control Panels
+  ansible.builtin.shell: |
+    talosctl apply-config \
+    {% if is_first_run %}
+    -i \
     {% endif %}
+    --talosconfig=./clusterconfig/talosconfig \
+    -n {{ hostvars[inventory_hostname].ansible_host }} \
+    -f ./clusterconfig/{{ cluster_name }}-{{ inventory_hostname }}.yaml;
   args:
     chdir: "{{ playbook_dir }}/talos-cluster"
+  when: "inventory_hostname in groups['control_planes']"
+
+- name: Apply configurations to Workers
+  ansible.builtin.shell: |
+    talosctl apply-config \
+    {% if is_first_run %}
+    -i \
+    {% endif %}
+    --talosconfig=./clusterconfig/talosconfig \
+    -n {{ hostvars[inventory_hostname].ansible_host }} \
+    -f ./clusterconfig/{{ cluster_name }}-{{ inventory_hostname }}.yaml;
+  args:
+    chdir: "{{ playbook_dir }}/talos-cluster"
+  when: "inventory_hostname in groups['workers']"

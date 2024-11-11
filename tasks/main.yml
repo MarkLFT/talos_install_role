@@ -1,6 +1,19 @@
 ---
-- name: Install required utilities
-  import_tasks: install_utilities.yml
+# - name: Install required utilities
+#   ansible.builtin.import_tasks: install_utilities.yml
 
-- name: Configure Talos cluster
-  import_tasks: configure_cluster.yml
+# - name: Configure Talos cluster
+#  ansible.builtin.import_tasks: configure_cluster.yml
+
+# - name: Bootstrap Talos cluster
+#  ansible.builtin.import_tasks: bootstrap_talos.yml
+
+# - name: Install Cilium
+#   ansible.builtin.import_tasks: install_cilium.yml
+
+# - name: Pull Kube Config
+#  ansible.builtin.import_tasks: get_kubeconfig.yml
+
+# - name: Pull Kube Config
+#  ansible.builtin.import_tasks: get_kubeconfig.yml
+

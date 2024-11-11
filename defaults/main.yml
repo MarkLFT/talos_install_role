@@ -1,16 +1,20 @@
 ---
-talos_version: "latest"
+talos_version: "v1.8.2"
 cilium_version: "latest"
-flux_version: "latest"
-talhelper_version: "latest"
+#flux_version: "latest"
+talhelper_version: "v3.0.8"
 
 cluster_name: "talos-cluster"
-kubernetes_version: "1.28.3"
+kubernetes_version: "1.31.2"
 cluster_endpoint: "https://{{ hostvars[groups['control_planes'][0]].ansible_host }}:6443"
 cluster_network: "10.244.0.0/16"
 install_disk: "/dev/sda"
-cluster_schedule_on_controlplane: "true"
+cluster_schedule_on_controlplane: "false"
 
 ip_gateway: "192.168.100.1"
 harbor_ip: "192.168.100.104"
+vip_address: "192.168.100.75"
 
+dns_servers: ["192.168.100.91", "192.168.100.92"]
+
+is_first_run: false

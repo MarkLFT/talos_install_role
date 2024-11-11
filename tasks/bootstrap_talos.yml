@@ -1,0 +1,19 @@
+---
+
+- name: Create .talos folder
+  ansible.builtin.file:
+    path: "~/.talos"
+    state: directory
+  when: inventory_hostname == groups['control_planes'][0]
+
+- name: Move config file to .talos folder
+  ansible.builtin.shell: |
+    cp {{ playbook_dir }}/talos-cluster/clusterconfig/talosconfig  ~/.talos/config
+  when: inventory_hostname == groups['control_planes'][0]
+
+- name: Bootstrap Talos
+  ansible.builtin.shell: |
+    talosctl bootstrap \
+     -n {{ hostvars[groups['control_planes'][0]].ansible_host }} \
+     -e {{ hostvars[groups['control_planes'][0]].ansible_host }};
+  when: inventory_hostname == groups['control_planes'][0]
